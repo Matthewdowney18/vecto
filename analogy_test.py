@@ -2,20 +2,16 @@ import vecto
 import vecto.embeddings
 from vecto.utils.data import save_json
 import pandas
-from pandas.io.json import json_normalize
-from matplotlib import pyplot as plt
 from vecto.benchmarks.analogy import LRCos
 
 
 class embeddings:
     name = 0
-    def __init__(self, dict):
-        i = dict['path']
+    def __init__(self, path):
+        i = path
         self.embedding_name = i.split('/')[5]
         self.embedding_directory = i
         self.embeddings = vecto.embeddings.load_from_dir(self.embedding_directory)
-        self.citation = dict['citation']
-        self.description = dict['description']
 
     def get_analogy(self, dataset):
         self.dataset_path = dataset
@@ -36,15 +32,33 @@ class embeddings:
             subcategory = i["experiment_setup"]["subcategory"]
             results = i['result']
             missing_pairs = self.get_length(subcategory) - i["experiment_setup"]["cnt_questions_total"]
-            dictionary[subcategory] = {'results' : results,'missing pairs' : missing_pairs }
-        dictionary['description'] = self.description
-        dictionary['citation'] = self.citation
+            dictionary[subcategory+' results'] = results
+            dictionary[subcategory + ' missing pairs'] = missing_pairs
+            dictionary['citation'] = self.get_citation()
+            dictionary['description'] = self.get_description()
         print(dictionary)
         return dictionary
 
+
+    def get_citation(self):
+        citation = self.result[0]['experiment_setup']['embeddings']['vocabulary']['corpus']['bib']
+        return citation
+
+
+    def get_description(self):
+        description = ''
+        if 'description' in self.result[0]['experiment_setup']['embeddings']:
+            description += self.result[0]['experiment_setup']['embeddings']['description']+ ", "
+            description += "corpus name: "+self.result[0]['experiment_setup']['embeddings']['vocabulary']['corpus']['name']
+            description += ", language: "+self.result[0]['experiment_setup']['embeddings']['vocabulary']['corpus']['language']
+            description += ", size: "+str(self.result[0]['experiment_setup']['embeddings']['vocabulary']['corpus']['size'])
+            #description += ", size: " + self.result[0]['experiment setup']['embeddings']['vocabulary']['corpus']['size']
+        return description
+
+
     def get_length(self, filename):
         i = 0
-        file = open(self.dataset_path+ filename, 'r')
+        file = open(self.dataset_path + filename, 'r')
         for line in file:
             i+=1
         return i
@@ -57,17 +71,10 @@ class embeddings:
 #embeddigns = vecto.embeddings.load_from_dir("/home/downey/PycharmProjects/jupyter_example/training-monolingual/")
 #embeddigns = vecto.embeddings.load_from_dir("/home/downey/PycharmProjects/jupyter_example/lstm/1/word/") #works
 
-directories = [{'path':"/home/downey/PycharmProjects/jupyter_example/!Demo2/embeddings/bnc/",
-                'citation':'',
-                'description':''},
-               {'path':"/home/downey/PycharmProjects/jupyter_example/lstm/1/word/",
-                'citation':'',
-                'description':'subword model with LSTM composition function from Li et al. trained on text8 '},
-               {'path':"/home/downey/PycharmProjects/jupyter_example/glove.6b/glove.6B/",
-                'citation':'Jeffrey Pennington, Richard Socher, and Christopher D. Manning. 2014. GloVe: '
-                           'Global Vectors for Word Representation. [pdf] [bib] ',
-                'description':'Wikipedia 2014 + Gigaword 5 (6B tokens, 400K vocab, uncased, 50d, 100d, 200d, & 300d'
-                              ' vectors)'}]
+directories = ["/home/downey/PycharmProjects/jupyter_example/!Demo2/embeddings/bnc/",
+               "/home/downey/PycharmProjects/jupyter_example/lstm/1/word/",
+               "/home/downey/PycharmProjects/jupyter_example/glove.6b/glove.6B/"]
+
 
 
 
@@ -75,9 +82,9 @@ df = pandas.DataFrame()
 dicts = []
 for file in directories:
     embedding = embeddings(file)
-    #results = embedding.get_analogy("/home/downey/PycharmProjects/jupyter_example/!Demo2/datasets/bats_small/")
-    results = embedding.get_analogy("/home/downey/PycharmProjects/jupyter_example/BATS_3.0/")
+    results = embedding.get_analogy("/home/downey/PycharmProjects/jupyter_example/!Demo2/datasets/bats_small/")
     dicts.append(embedding.get_dictionary())
     df = pandas.DataFrame(dicts).set_index('embedding')
     df.to_csv('table1.csv')
+
     print(df)
